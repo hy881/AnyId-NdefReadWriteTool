@@ -67,6 +67,11 @@ namespace NDEFReadWriteTool
             return Encoding.ASCII.GetString(code);
         }
 
+        public static string byteToUtf8(byte[] code)
+        {
+            return Encoding.UTF8.GetString(code);
+        }
+
         public static byte[] asciiToByte(string code)
         {
             return System.Text.Encoding.ASCII.GetBytes(code);

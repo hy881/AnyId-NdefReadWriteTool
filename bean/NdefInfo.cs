@@ -12,21 +12,16 @@ namespace NDEFReadWriteTool.bean
         {
         }
 
-        public NdefInfo(string uid, string cc, string ndefData)
+        public NdefInfo(string uid, string cc, string[] ndefData)
         {
             Uid = uid;
             Cc = cc;
             NdefData = ndefData;
         }
 
-        public NdefInfo(string uid, string cc, string ndefData, string ndefData2) : this(uid, cc, ndefData)
-        {
-            NdefData2 = ndefData2;
-        }
 
         public string Uid { get; set; }
         public string Cc { get; set; }
-        public string NdefData { get; set; }
-        public string NdefData2 { get; set; }
+        public string[] NdefData { get; set; }
     }
 }

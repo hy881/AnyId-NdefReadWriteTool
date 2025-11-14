@@ -10,39 +10,29 @@ using System.Threading.Tasks;
 namespace NDEFReadWriteTool.View
 {
 
+    public delegate void WriteNDEFEventHandler(int ndefType, string[] ndefList);
     internal interface IReaderView
-    {
-
-      
-        ConnectParam GetConnectParam();
+    {      
 
         NdefInfo GetNdefInfo(int writeType);
 
-        event EventHandler<bool> ConnectSwitchValueChange;
+        event Action<bool,ConnectParam> ConnectSwitchValueChange;
 
         event EventHandler RefreshButtonClick;
 
+        event EventHandler InitTagButtonClick;
+
         event UIRadioButtonGroup.OnValueChanged RadioButtonChange;
 
-        event EventHandler ReadURLButtonClick;
+        event Action ReadNdefDataEvent;
 
-        event EventHandler WriteURLButtonClick;
-
-        event EventHandler ReadTXTButtonClick;
-
-        event EventHandler WriteTXTButtonClick;
-
-        event EventHandler WriteWifiButtonClick;
-
-        event EventHandler ReadWifiButtonClick;
-
-        event EventHandler WriteBleButtonClick;
-
-        event EventHandler ReadBleButtonClick;
+        event WriteNDEFEventHandler WriteNdefDataEvent;
 
         void showReaderVersion(ReaderVersion readerVersion);
         void controlProgressDialog(bool bOpen);
         void showTips(int type, string message);
-        void showNdefInfo(NdefInfo info,int type);
+        void showNdefInfo(NdefInfo info);
+        void updateDataGridView(int type,NdefInfo info);
+        void ConnectViewEnable(bool enable);
     }
 }

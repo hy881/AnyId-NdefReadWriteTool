@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="bean\NdefInfo.cs" />
+    <Compile Include="bean\OperationResult.cs" />
     <Compile Include="Infrastructure\AnyIDReader.cs" />
     <Compile Include="bean\ConnectParam.cs" />
     <Compile Include="bean\ReaderVersion.cs" />
@@ -76,6 +77,7 @@
     <Compile Include="Presenter\ReaderPersenter.cs" />
     <Compile Include="TranfUtil.cs" />
     <Compile Include="View\IReaderView.cs" />
+    <Compile Include="WindowZoomer.cs" />
     <EmbeddedResource Include="View\Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>

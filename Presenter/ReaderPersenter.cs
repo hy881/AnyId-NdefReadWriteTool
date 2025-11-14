@@ -1,4 +1,5 @@
 ﻿using NDEFReadWriteTool.bean;
+using NDEFReadWriteTool.Properties;
 using NDEFReadWriteTool.View;
 using System;
 using System.Collections.Generic;
@@ -19,41 +20,39 @@ namespace NDEFReadWriteTool
             _readerService = readerService;
             this._readerView = readerView;
             this._readerView.ConnectSwitchValueChange += connectSwitchClick;
-            _readerService.OnVersionReturn += readerVersionReturn;
-            _readerService.OnInfoReturn += OnNdefRwReturn;
+            _readerService.onReaderVersionReturn += readerVersionReturn;
+
             _readerView.RefreshButtonClick += refreshBtnClick;
             _readerView.RadioButtonChange += tagTypeChange;
-            _readerView.ReadURLButtonClick += readUrlBtnClick;
-            _readerView.WriteURLButtonClick += writeUrlBtnClick;
-            _readerView.WriteTXTButtonClick += writeTxtBtnClick;
-            _readerView.ReadTXTButtonClick += readTxtBtnClick; 
-            _readerView.WriteWifiButtonClick += writeWifidBtnClick;
-            _readerView.ReadWifiButtonClick+=readWifiBtnClick;
-            _readerView.WriteBleButtonClick += writeBleBtnClick;
-            _readerView.ReadBleButtonClick += readbleBtnClick;
+
+            _readerView.ReadNdefDataEvent += readNdefData;
+            _readerView.WriteNdefDataEvent += writeNdefData;
+            _readerView.InitTagButtonClick += initNdefTag;
         }
 
-        private  async void connectSwitchClick(object sender,bool value)
+        private  async void connectSwitchClick(bool value,ConnectParam connectParam)
         {
             //view需要弹出进度dialog
             _readerView.controlProgressDialog(true);
-            ConnectParam param = _readerView.GetConnectParam();
             if (value)
             {           
-                bool result = await _readerService.ReaderInitAsync(param,Properties.Settings.Default.TagType);
+                bool result = await _readerService.ReaderInitAsync(connectParam, Properties.Settings.Default.TagType);
                 if (result)
                 {
                     _readerView.showTips(0, "设备连接成功");
+                    _readerView.ConnectViewEnable(true);
                 }
                 else
                 {
                     _readerView.showTips(2, "设备连接失败");
+                    _readerView.ConnectViewEnable(false);
                 }
             }
             else
             {
-                _readerService.CloseReader(param.ConnectType);
+                _readerService.CloseReader(connectParam.ConnectType);
                 _readerView.showTips(0, "设备关闭成功");
+                _readerView.ConnectViewEnable(false);
             }
             //view关闭进度dialog
             _readerView.controlProgressDialog(false);
@@ -94,147 +93,123 @@ namespace NDEFReadWriteTool
             _readerView.controlProgressDialog(false);
         }
 
-        private async void readUrlBtnClick(object sender,EventArgs args)
+        private async void initNdefTag(object e, EventArgs args)
         {
-            bool bResult = await _readerService.ReadNdefDataAsync(0);
-            if (bResult)
+            try
             {
+                OperationResult uidRlt = await _readerService.GetTagUidAsync();
+                if (!uidRlt.IsSuccess)
+                {
+                    _readerView.showTips(2, uidRlt.ErrorMessage);
+                    return;
+                }
+                OperationResult ccRlt = await _readerService.InitTagAsync(144);
+                if (!ccRlt.IsSuccess)
+                {
+                    _readerView.showTips(2, ccRlt.ErrorMessage);
+                    return;
+                }
+                _readerView.showTips(0, "初始化成功");
+            }
+            catch (Exception)
+            {
+
+                _readerView.showTips(2, "初始化失败");
+            }
+        }
+        private async void readNdefData()
+        {
+            try
+            {
+                NdefInfo ndefInfo = new NdefInfo();
+                //读UID
+                OperationResult uidRlt = await _readerService.GetTagUidAsync();
+                if (!uidRlt.IsSuccess)
+                {
+                    _readerView.showTips(2, uidRlt.ErrorMessage);
+                    return;
+                }
+                ndefInfo.Uid = uidRlt.Data.ToString();
+                _readerView.showNdefInfo(ndefInfo);
+                //读CCdata
+                OperationResult ccRlt = await _readerService.GetTagCcDataAsync();
+                if (!ccRlt.IsSuccess)
+                {
+                    _readerView.showTips(2, ccRlt.ErrorMessage);
+                    return;
+                }
+                ndefInfo.Cc = ccRlt.Data.ToString();
+                _readerView.showNdefInfo(ndefInfo);
+                //读NDEF
+                OperationResult ndefRlt = await _readerService.ReadNdefDataAsync();
+                if (!ndefRlt.IsSuccess)
+                {
+                    _readerView.showTips(2, ndefRlt.ErrorMessage);
+                    return;
+                }
+
+                ndefInfo.NdefData = ndefRlt.Data.ToString().Split('#');
+                _readerView.showNdefInfo(ndefInfo);
                 _readerView.showTips(0, "读取成功");
             }
-            else
+            catch (Exception)
             {
-                _readerView.showTips(2, "读取错误");
+                _readerView.showTips(2, "读取失败");
             }
+          
         }
 
-        private async void writeUrlBtnClick(object sender,EventArgs e)
+        private async void writeNdefData(int ndefType,string[] ndefList)
         {
-            
-            NdefInfo info = _readerView.GetNdefInfo(0);
-            int tagType = Properties.Settings.Default.TagType;
-            if (info.Cc.Length != 8&&tagType!=1)
+            NdefInfo ndefInfo = new NdefInfo();
+            try
             {
-                _readerView.showTips(2, "CC数据输入错误");
-                return;
-            }
-            bool bResult=await _readerService.WriteNdefDataAsync(0,info.Cc,info.NdefData,"");
-            if (bResult)
-            {
+                //读UID
+                OperationResult uidRlt = await _readerService.GetTagUidAsync();
+                if (!uidRlt.IsSuccess)
+                {
+                    _readerView.showTips(2, uidRlt.ErrorMessage);
+                    return;
+                }
+                ndefInfo.Uid = uidRlt.Data.ToString();
+                //读CCdata
+                OperationResult ccRlt = await _readerService.GetTagCcDataAsync();
+                if (!ccRlt.IsSuccess)
+                {
+                    _readerView.showTips(2, ccRlt.ErrorMessage);
+                    return;
+                }
+                if (ccRlt.Data.ToString().Length==0)
+                {
+                    int len = 0;
+                    for (int i = 0; i < ndefList.Length; i++)
+                    {
+                        len += ndefList[i].Length;
+                    }
+                    OperationResult writeCcRlt = await _readerService.InitTagAsync(len);
+                    if (!writeCcRlt.IsSuccess)
+                    {
+                        _readerView.showTips(2, writeCcRlt.ErrorMessage);
+                        return;
+                    }
+                }
+                ndefInfo.Cc = ccRlt.Data.ToString();
+                OperationResult writeRlt = await _readerService.WriteNdefDataAsync(ndefType,ndefList);
+                if (!writeRlt.IsSuccess)
+                {
+                    _readerView.showTips(2, writeRlt.ErrorMessage);
+                    return;
+                }
+                ndefInfo.NdefData = ndefList;
                 _readerView.showTips(0, "写入成功");
+                _readerView.updateDataGridView(ndefType, ndefInfo);
             }
-            else
+            catch (Exception ex)
             {
-                _readerView.showTips(2, "写入错误");
+                _readerView.showTips(2, "写入失败");
             }
         }
 
-        private async void readTxtBtnClick(object sender, EventArgs args)
-        {
-            bool bResult = await _readerService.ReadNdefDataAsync(1);
-            if (bResult)
-            {
-                _readerView.showTips(0, "读取成功");
-            }
-            else
-            {
-                _readerView.showTips(2, "读取错误");
-            }
-        }
 
-        private async void writeTxtBtnClick(object sender, EventArgs e)
-        {
-            NdefInfo info = _readerView.GetNdefInfo(1);
-            int tagType = Properties.Settings.Default.TagType;
-            if (info.Cc.Length != 8 && tagType != 1)
-            {
-                _readerView.showTips(2, "CC数据输入错误");
-                return;
-            }
-            bool bResult = await _readerService.WriteNdefDataAsync(1, info.Cc, info.NdefData, "");
-            if (bResult)
-            {
-                _readerView.showTips(0, "写入成功");
-            }
-            else
-            {
-                _readerView.showTips(2, "写入错误");
-            }
-        }
-
-        private async void readWifiBtnClick(object sender, EventArgs args)
-        {
-            bool bResult = await _readerService.ReadNdefDataAsync(2);
-            if (bResult)
-            {
-                _readerView.showTips(0, "读取成功");
-            }
-            else
-            {
-                _readerView.showTips(2, "读取错误");
-            }
-        }
-
-        private async void writeWifidBtnClick(object sender,EventArgs e)
-        {
-            NdefInfo info = _readerView.GetNdefInfo(2);
-            int tagType = Properties.Settings.Default.TagType;
-            if (info.Cc.Length != 8 && tagType != 1)
-            {
-                _readerView.showTips(2, "CC数据输入错误");
-                return;
-            }
-            bool bResult = await _readerService.WriteNdefDataAsync(2,info.Cc,info.NdefData,info.NdefData2);
-            if (bResult)
-            {
-                _readerView.showTips(0, "写入成功");
-            }
-            else
-            {
-                _readerView.showTips(2, "写入错误");
-            }
-        }
-
-        private async void readbleBtnClick(object sender, EventArgs args)
-        {
-            bool bResult = await _readerService.ReadNdefDataAsync(3);
-            if (bResult)
-            {
-                _readerView.showTips(0, "读取成功");
-            }
-            else
-            {
-                _readerView.showTips(2, "读取错误");
-            }
-        }
-
-        private async void writeBleBtnClick(object sender, EventArgs e)
-        {
-            NdefInfo info = _readerView.GetNdefInfo(3);
-            int tagType = Properties.Settings.Default.TagType;
-            if (info.Cc.Length != 8 && tagType != 1)
-            {
-                _readerView.showTips(2, "CC数据输入错误");
-                return;
-            }
-            if (!TranfUtil.IsMacAddress(info.NdefData))
-            {
-                _readerView.showTips(2, "MAC地址格式输入错误");
-                return;
-            }
-            bool bResult = await _readerService.WriteNdefDataAsync( 3, info.Cc, info.NdefData, "");
-            if (bResult)
-            {
-                _readerView.showTips(0, "写入成功");
-            }
-            else
-            {
-                _readerView.showTips(2, "写入错误");
-            }
-        }
-
-        private void OnNdefRwReturn(NdefInfo ndefInfo,int type)
-        {
-            _readerView.showNdefInfo(ndefInfo,type);            
-        }
     }
 }

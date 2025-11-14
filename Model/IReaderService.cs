@@ -7,17 +7,18 @@ using System.Threading.Tasks;
 
 namespace NDEFReadWriteTool
 {
-    public delegate void VersionReturnDelegate(ReaderVersion readerVersion);
-    public delegate void OnMessageReturnDelegate(NdefInfo value, int index);
+
     internal interface IReaderService
     {
-        event OnMessageReturnDelegate OnInfoReturn;
-        event VersionReturnDelegate OnVersionReturn;
+        event Action<ReaderVersion> onReaderVersionReturn;
         Task<bool> ReaderInitAsync(ConnectParam param,int tagType);
         Task<bool> GetReaderVersionAsync();
         Task<bool> SetReaderConfigAsync(int type);
-        Task<bool> ReadNdefDataAsync(int ndefType);
-        Task<bool> WriteNdefDataAsync(int ndefType, string ccData, string ndefData1,string ndefData2);
+        Task<OperationResult> GetTagUidAsync();
+        Task<OperationResult> GetTagCcDataAsync();
+        Task<OperationResult> ReadNdefDataAsync();
+        Task<OperationResult> InitTagAsync(int len);
+        Task<OperationResult> WriteNdefDataAsync(int ndefType, string[] ndefList);
         void CloseReader(int type);
 
        
