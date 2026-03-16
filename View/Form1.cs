@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Ports;
@@ -579,6 +580,16 @@ namespace NDEFReadWriteTool
                 ConnectSwitchValueChange?.Invoke(false, param);
                 //界面还原
             }
+        }
+
+        private void btn_contact_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://www.anyid.com.cn/lxwm");
+        }
+
+        private void btn_download_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://www.anyid.com.cn/xzzx");
         }
     }
 }
